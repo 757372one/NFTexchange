@@ -83,15 +83,63 @@ saveUserInfo = async () => {
     openUserInfo();
 }
 
+createItem = async () => {
+    if (createItemFile.files.length == 0){
+        alert("Please select file");
+        return;
+    }else if (createItemFile.value.length == 0){
+        alert("Please give the item a name");
+        return;
+    }
+
+    const nftFile = new Moralis.File("nftFile.png", createItemFile.files[0]);
+    await nftFile.saveIPFS();
+
+    const nftFilePath = nftFile.ipfs();
+    const nftFileHash = nftFile.hash();
+
+    // metadata
+    const metadata = {
+        name: createItemNameField.value,
+        description: createItemDescriptionField.value,
+        nftFilePath: nftFilePath,
+        nftFileHash: nftFileHash
+    
+    };
+
+    const nftFileMetadataFile = new Moralis.File("metadata.json", {base64 : btoa(JSON.stringify(metadata))});
+    await nftFileMetadataFile.saveIPFS();
+
+    const nftFileMetadataFilePath = nftFileMetadataFile.ipfs();
+    const nftFileMetadataFileHash = nftFileMetadataFile.hash();
+
+    const Item = Moralis.Object.extend("Item");
+    // create instance of that class
+    const item = new Item();
+    item.set('name', createItemNameField.value);
+    item.set('description', createItemDescriptionField.value);
+    item.set('nftFilePath', nftFilePath);
+    item.set('nftFileHash', nftFileHash);
+    item.set('metadataFilePath', nftFileMetadataFilePath);
+    item.set('metadataFileHash', nftFileMetadataFileHash);
+    await item.save();
+    console.log(item)
+
+}
+
 
 hideElement = (element) => element.style.display = "none";
 showElement = (element) => element.style.display = "block";
 
+// Navbar
 const userConnectButton = document.getElementById("btnConnect");
 userConnectButton.onclick = login;
 
 const userProfileButton = document.getElementById("btnUserInfo");
 userProfileButton.onclick = openUserInfo;
+
+const openCreateItemButton = document.getElementById("btnOpenCreateItem");
+openCreateItemButton.onclick = () => showElement(createItemForm)
 
 // user info
 const userInfo = document.getElementById("userInfo");
@@ -104,16 +152,14 @@ document.getElementById("btnCloseUserInfo").onclick = () => hideElement(userInfo
 document.getElementById("btnLogout").onclick = logout;
 document.getElementById("btnSaveUserInfo").onclick = saveUserInfo;
 
-// create form
+// Create form / Item Creation
 const createItemForm = document.getElementById("createItem");
 const createItemNameField = document.getElementById("txtCreateItemName");
 const createItemDescriptionField = document.getElementById("txtCreateItemDescription");
 const createItemPriceField = document.getElementById("numCreateItemPrice");
 const createItemStatusField = document.getElementById("selectCreateItemStatus");
 const createItemFile = document.getElementById("fileCreateItemFile");
-
-const openCreateItemButton = document.getElementById("btnOpenCreateItem");
-openCreateItemButton.onclick = () => showElement(createItemForm)
 document.getElementById("btnCloseCreateItem").onclick = () => hideElement(createItemForm);
+document.getElementById("btnCreateItem").onclick =  createItem;
 
 init();
