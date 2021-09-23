@@ -1,11 +1,12 @@
 Moralis.initialize("ePMhX0P0udI02SgDcF9Ec3bWlpj9rdTnqbHEZjhK");
 Moralis.serverURL = 'https://kgywjmltgjny.grandmoralis.com:2053/server'
+const TOKEN_CONTRACT_ADDRESS = '0xe2a9A035643eaB8B06Ba22Bae83E2b9A903Cf8D4'
 
 init = async () => {
-
     hideElement(userInfo);
     hideElement(createItemForm);
     window.web3 = await Moralis.Web3.enable();
+    window.tokenContract = new web3.eth.Contract(tokenContractAbi, TOKEN_CONTRACT_ADDRESS)
     initUser();
 }
 
@@ -50,10 +51,9 @@ openUserInfo = async () => {
         }else{
             userEmailField.value = "";
         }
-
         userUsernameField.value = user.get('username');
-
         const userAvatar = user.get('avatar');
+
         if(userAvatar){
             userAvatarImg.src = userAvatar.url();
             showElement(userAvatarImg);
@@ -102,8 +102,7 @@ createItem = async () => {
     const metadata = {
         name: createItemNameField.value,
         description: createItemDescriptionField.value,
-        nftFilePath: nftFilePath,
-        nftFileHash: nftFileHash
+        image: nftFilePath
     
     };
 
@@ -112,6 +111,8 @@ createItem = async () => {
 
     const nftFileMetadataFilePath = nftFileMetadataFile.ipfs();
     const nftFileMetadataFileHash = nftFileMetadataFile.hash();
+
+    const nftId = await mintNFT(nftFileMetadataFilePath);
 
     const Item = Moralis.Object.extend("Item");
     // create instance of that class
@@ -122,9 +123,17 @@ createItem = async () => {
     item.set('nftFileHash', nftFileHash);
     item.set('metadataFilePath', nftFileMetadataFilePath);
     item.set('metadataFileHash', nftFileMetadataFileHash);
+    item.set('nftId', nftId);
+    item.set('nftContractAddress', TOKEN_CONTRACT_ADDRESS);
     await item.save();
     console.log(item)
 
+}
+
+mintNFT = async (metadataUrl) => {
+    const receipt = await tokenContract.methods.createItem(metadataUrl).send({from: ethereum.selectedAddress});
+    console.log(receipt);
+    return receipt.events.Transfer.returnValues.tokenId;
 }
 
 
